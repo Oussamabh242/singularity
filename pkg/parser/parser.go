@@ -2,55 +2,77 @@ package parser
 
 import (
 	"fmt"
+  "encoding/json"
 )
 
 const (
-    PUBLISH     = 0x30 // Publish     
-    SUBSCRIBE   = 0x82 // Subscribe to topic
-    UNSUBSCRIBE = 0xA2 // Unsubscribe from topics
-    CONNECT     = 0x10 // Initiate connection
-    CONNACK     = 0x20 // Acknowledgment of connection
-    DISCONNECT  = 0xE0 // Disconnect from the broker
-    PINGREQ     = 0xC0 // Ping request
-    PINGRESP    = 0xD0 // Ping response
-    PUBACK      = 0x40 // Acknowledgment for publish (QoS 1)
-    PUBREC      = 0x50 // Publish received (QoS 2)
-    PUBREL      = 0x62 // Publish release (QoS 2)
-    PUBCOMP     = 0x70 // Publish complete (QoS 2)
+    PUBLISH     = 1// Publish     
+    SUBSCRIBE   = 2 // Subscribe to Queue
+    CREATEQUEUE = 3
+    RECEIVE     = 4
+    ACKMSG      = 5
+    REJECTMSG   = 6
+    PING        = 7
 
-    BYTE_MASK  = 0x7F  // Get the first 7 bit and ignore the first one ()
+    BYTE_MASK  = 0x7F  
 )
+
+type Metadata struct {
+  Queue string `json:"queue"`
+  Topic string `json:"Topic"`
+}
 
 type Packet struct {
   PacketType string
   RLenght    uint
-  TopicLen   uint
-  TopicName  string
+  MetadataLen   uint
+  Metadata  Metadata
   PayloadLen uint 
   Payload    string
 }
 
 func Parse(packet  []byte) Packet  {
+  totalsize := len(packet)
+  parsed :=Packet{}  
+  parsed.PacketType = packetTypeToString(packet[0])
+  rLenght , nextByte := getLength(packet , 1 ) // at most 4 bytes starting from 2nd bit 
+  parsed.RLenght = rLenght
+  fmt.Println(parsed , nextByte)
 
-  pType := packetTypeToString(packet[0])
-  rLenght , nextByte := getLength(packet[1 : 5] , 1 ) // at most 4 bytes starting from 2nd bit 
-  fmt.Println("1" , pType , rLenght ,nextByte)
-  tLength , nextByte := getLength(packet[nextByte:nextByte+2] , nextByte) // at most 2 bytes
-  fmt.Println("2" , tLength , nextByte)
+  if rLenght == 0 || nextByte >= totalsize {
+    return  parsed
+  }
 
-  tName , nextByte := getString(packet , nextByte , tLength) 
-  pLength , nextByte := getLength(packet[nextByte : nextByte+4] , nextByte) 
-  payload , _ := getString(packet , nextByte , pLength) 
-  return Packet{
-    PacketType: pType ,
-    RLenght: rLenght,
-    TopicLen: tLength,
-    TopicName: tName,
-    PayloadLen: pLength,
-    Payload: payload,
+  mLength , nextByte := getLength(packet , nextByte) // at most 2 bytes
+  parsed.MetadataLen = mLength
+  fmt.Println(mLength ,parsed , nextByte) 
+  if mLength > 0 {
+    fmt.Println("inside")
+    var metadata Metadata
+    metadata , nextByte = parseMetadata(packet , nextByte , mLength) 
+    parsed.Metadata = metadata
+  }
+  if nextByte >= totalsize {
+    return parsed
+  }
+  fmt.Println(parsed)
+  pLength , nextByte := getLength(packet , nextByte) 
+  parsed.PayloadLen = pLength
+  if pLength> 0 {
+    payload , _ := getString(packet , nextByte , pLength) 
+    parsed.Payload = payload
   }
 
 
+  return parsed 
+
+}
+
+
+func parseMetadata(packet []byte , start int  , length uint) (Metadata , int) {
+  md := Metadata{}
+  json.Unmarshal(packet[start : start+int(length)],&md)
+  return md , start+int(length)
 }
 
 // get the remaining Length using the variable Length encoding
@@ -59,16 +81,25 @@ func Parse(packet  []byte) Packet  {
 func getLength(sequence []byte , start int) (uint , int)   {
   nextByte := start +len(sequence)
   size := ""
-  for i , val := range sequence {
-    msb := (val>>7)  
-    length := val & byte(BYTE_MASK)
-    fmt.Println(val , length , byteToBinary(length))
-    size+=byteToBinary(length)
-    if msb == 0 {
-      nextByte = start +i +1
+  fmt.Println("starting to collect " ,start , start+4)
+  for i:= start ; i<start+4 ; i++{
+    if i> len(sequence) {
+      nextByte = -1
       break
     }
-  }  
+    msb := (sequence[i]>>7)  
+    length := sequence[i] & byte(BYTE_MASK)
+    fmt.Println(sequence[i] , length , byteToBinary(length))
+    size+=byteToBinary(length)
+    if msb == 0 {
+      fmt.Println("inside msb")
+      nextByte = i+1
+      break
+    }
+  } 
+  if nextByte > len(sequence) {
+    nextByte = -1
+  }
   return binaryToUint(size) ,nextByte 
 }
 
@@ -93,26 +124,16 @@ func packetTypeToString(packetType byte) string {
         return "PUBLISH"
     case SUBSCRIBE:
         return "SUBSCRIBE"
-    case UNSUBSCRIBE:
-        return "UNSUBSCRIBE"
-    case CONNECT:
-        return "CONNECT"
-    case CONNACK:
-        return "CONNACK"
-    case DISCONNECT:
-        return "DISCONNECT"
-    case PINGREQ:
-        return "PINGREQ"
-    case PINGRESP:
-        return "PINGRESP"
-    case PUBACK:
-        return "PUBACK"
-    case PUBREC:
-        return "PUBREC"
-    case PUBREL:
-        return "PUBREL"
-    case PUBCOMP:
-        return "PUBCOMP"
+    case ACKMSG:
+        return "ACKMSG"
+    case CREATEQUEUE:
+        return "CREATEQUEUE"
+    case RECEIVE:
+        return "RECEIVE"
+    case REJECTMSG:
+        return "REJECTMSG"
+    case PING:
+      return "PING"
     default:
         return "UNKNOWN"
     }
