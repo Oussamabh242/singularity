@@ -6,13 +6,12 @@ import (
 
 const (
 	PUBLISH     = 1 // Publish
-	SUBSCRIBE   = 2 // Subscribe to Queue
-	CREATEQUEUE = 3
-	RECEIVE     = 4
-	ACKMSG      = 5
-	REJECTMSG   = 6
-	PING        = 7
-
+  ACKRECIVE   = 2 // Acknowledge Publishing
+	SUBSCRIBE   = 3 // Subscribe to Queue
+  ACKSUBSCRIBE= 4
+	CREATEQUEUE = 5
+  ACKQREATE   = 6
+	PING        = 100
 	BYTE_MASK = 0x7F
 )
 
@@ -23,7 +22,7 @@ type Metadata struct {
 }
 
 type Packet struct {
-	PacketType  string
+	PacketType  int
 	RLenght     uint
 	MetadataLen uint
 	Metadata    Metadata
@@ -33,9 +32,9 @@ type Packet struct {
 
 func Parse(packet []byte) Packet {
 	totalsize := len(packet)
-	parsed := Packet{}
-	parsed.PacketType = packetTypeToString(packet[0])
-	rLenght, nextByte := getLength(packet, 1) // at most 4 bytes starting from 2nd bit
+	parsed := Packet{}   
+	parsed.PacketType = int(packet[0])  
+  rLenght, nextByte := getLength(packet, 1) // at most 4 bytes starting from 2nd bit
 	parsed.RLenght = rLenght
 
 	if rLenght == 0 || nextByte >= totalsize {
@@ -105,23 +104,4 @@ func getString(packet []byte, start int, length uint) (string, int) {
 }
 
 // determining the packet type
-func packetTypeToString(packetType byte) string {
-	switch packetType {
-	case PUBLISH:
-		return "PUBLISH"
-	case SUBSCRIBE:
-		return "SUBSCRIBE"
-	case ACKMSG:
-		return "ACKMSG"
-	case CREATEQUEUE:
-		return "CREATEQUEUE"
-	case RECEIVE:
-		return "RECEIVE"
-	case REJECTMSG:
-		return "REJECTMSG"
-	case PING:
-		return "PING"
-	default:
-		return "UNKNOWN"
-	}
-}
+
