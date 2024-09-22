@@ -6,27 +6,23 @@ import (
 	"sync"
 )
 
-type Listener struct {
-  Conn net.Conn 
-  Free bool
-  Connected bool
-}
+type Listener net.Conn
 
 type Queue struct {
-  Listeners []Listener
-  Store chan string
+  Listeners chan Listener
+  mux       sync.Mutex
 }
 
-func (q *Queue) Enqueue(msg string){
-  q.Store<-msg
+func (q *Queue) Enqueue(conn net.Conn){
+  q.Listeners <- conn
 }
 
-func (q *Queue) Dequeue() string{
-  return <-q.Store
+func (q *Queue) Dequeue() Listener {
+  return <-q.Listeners
 }
 
-func (q *Queue) Channel() chan string {
-  return q.Store
+func (q *Queue) Channel() chan Listener {
+  return q.Listeners
 }
 
 type QStore struct {
@@ -35,8 +31,7 @@ type QStore struct {
 
 func (qs *QStore) CreateQueue(name string)  {
   q := Queue{
-    Store: make(chan string, 20),
-    Listeners: []Listener{},
+    Listeners: make(chan Listener , 20),
   }
   qs.Queues.Store(name , &q)
 }

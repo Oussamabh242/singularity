@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/Oussamabh242/singularity/pkg/feed"
 	"github.com/Oussamabh242/singularity/pkg/handlers"
+	"github.com/Oussamabh242/singularity/pkg/messages"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
 
@@ -12,7 +14,7 @@ import (
 	"os"
 )
 
-func handleConnection(conn net.Conn , qs *queue.QStore) {
+func handleConnection(conn net.Conn , qs *queue.QStore , ms *messages.MsgStore) {
 	b := make([]byte, 1024)
 	conn.Read(b)
 	thing := parser.Parse(b)
@@ -21,27 +23,21 @@ func handleConnection(conn net.Conn , qs *queue.QStore) {
     handlers.HandlePing(conn)
     break
   case parser.PUBLISH :
-    handlers.HandlePublish(conn , &thing, qs)
+    handlers.HandlePublish(conn , &thing, qs , ms)
     break
   case parser.CREATEQUEUE :
     handlers.HandlerCreateQueue(conn  , &thing , qs)
     break
 
   case parser.SUBSCRIBE :
-    handlers.HandleSubscribe(conn , &thing , qs)
+    handlers.HandleSubscribe(conn , &thing , qs )
     break
 
   default :
     fmt.Println("UNKNOWN")
   }
-  fmt.Println(thing.RLenght)
-  // if thing.PacketType == parser.SUBSCRIBE {
-  //   q , _ := qs.GetQueue(thing.Metadata.Queue)
-  //   msg := <- q.Store
-  //   fmt.Println(len(q.Listeners))
-  //   time.Sleep(time.Second*1)
-  //   q.Listeners[0].Conn.Write([]byte(msg))
-  // }
+
+
 }
 
 func main() {
@@ -57,11 +53,14 @@ func main() {
   
   qs := queue.NewQStore()
   qs.CreateQueue("q")
+  mStore := messages.NewMessageStore()
+  go feed.FeedMessages(&qs , &mStore)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Println("error establishing connection : ", err)
 		}
-		go handleConnection(conn , &qs)
+		go handleConnection(conn , &qs , &mStore)
+
 	}
 }

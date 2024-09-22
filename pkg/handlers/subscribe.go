@@ -14,12 +14,7 @@ func HandleSubscribe(conn net.Conn , parsed *parser.Packet ,qs *queue.QStore)  {
   if err != nil{
     conn.Write([]byte("error subscribing no queue"))
   }
-  client := queue.Listener{
-    Conn : conn ,
-    Free: true,
-    Connected: true,
-  }
-  q.Listeners = append(q.Listeners,client )
+  q.Enqueue(conn)
   ackSubs(conn) 
 }
 

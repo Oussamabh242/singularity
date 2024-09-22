@@ -11,7 +11,10 @@ const (
   ACKSUBSCRIBE= 4
 	CREATEQUEUE = 5
   ACKQREATE   = 6
+  JOB         = 7
+  ACKJOB      = 8
 	PING        = 100
+
 	BYTE_MASK = 0x7F
 )
 
