@@ -19,7 +19,8 @@ class Singularity :
             "queue":qname
         }).encode("utf-8")
         # 5 , len(n)+2 , len(n) , n , 0
-        packet= bytes([5 ,len(metadata)+2 , len(metadata)  ]+list(metadata)+[0])
+        
+        packet = bytes([5]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + bytes([0])
         try :
             self.connect()
             self.sock.sendall(packet)
@@ -31,10 +32,10 @@ class Singularity :
         metadata =json.dumps( {
             "queue":qname
         }).encode("utf-8")
-        msgByte = list(msg.encode("utf-8"))
+        msgByte = msg.encode("utf-8")
 
-        packet= bytes([1 ,len(metadata)+2 , len(metadata)  ]+list(metadata)+[len(msgByte)]+msgByte)
-
+        packet = bytes([1]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + len(msgByte).to_bytes(2,byteorder="big" ) +msgByte
+        
         try :
             self.connect()
             self.sock.sendall(packet)
@@ -47,7 +48,7 @@ class Singularity :
         metadata =json.dumps( {
             "queue":qname
         }).encode("utf-8")
-        packet= bytes([3 ,len(metadata)+2 , len(metadata)  ]+list(metadata)+[0])
+        packet = bytes([3]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + bytes([0])
 
         
         self.connect()
@@ -58,12 +59,12 @@ class Singularity :
             while 1 : 
                 job = self.sock.recv(50)
                 print("working on" ,str(job))
-                time.sleep(4)
+                time.sleep(3)
                 self.sock.sendall(b"ok")
      
 
 sing = Singularity(PORT ,HOST)
-# sing.CreateQueue("someQueue")
+sing.CreateQueue("someQueue")
 # sing.Publish("someQueue" , "hello there 1")
 # sing.Publish("someQueue" , "hello there 2")
 # sing.Publish("someQueue" , "hello there 3")
