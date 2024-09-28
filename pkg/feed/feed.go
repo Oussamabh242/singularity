@@ -1,3 +1,4 @@
+
 package feed
 
 import (
@@ -10,81 +11,81 @@ import (
 	"github.com/Oussamabh242/singularity/pkg/queue"
 )
 
-func FeedMessages(qs *queue.QStore , ms *messages.MsgStore)  {
-  i := 0
-  for {
-    i ++
-    fmt.Println(i , "Waiting for a message")
-    msg := ms.Get()
-    ctx , cancel := context.WithTimeout(context.Background() ,time.Second*5)
-    go func(ctx context.Context , cnacel context.CancelFunc) {
-      defer cancel()
-      AwaitForWork(ctx ,qs ,ms , msg)
-    }(ctx ,cancel)
-    
-  }
-  
+func FeedMessages(qs *queue.QStore, ms *messages.MsgStore) {
+	for {
+		msg := ms.Get()
+		q, _ := qs.GetQueue(msg.Queue)
+		fmt.Println(len(q.Listeners))
+		if len(q.Listeners) > 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			go func(ctx context.Context, cancel context.CancelFunc, msg messages.Message) {
+				defer cancel()
+				AwaitForWork(ctx, q, ms, msg)
+			}(ctx, cancel, msg)
+		} else {
+			ms.Add(msg)
+
+		}
+	}
 }
 
+func AwaitForWork(ctx context.Context, q *queue.Queue, ms *messages.MsgStore, msg messages.Message) {
+	var recv = make(chan int)
+	var errCh = make(chan struct{})
 
-func AwaitForWork(ctx context.Context ,qs *queue.QStore,ms *messages.MsgStore  ,msg messages.Message){
-  q , _ := qs.GetQueue(msg.Queue) 
-  fmt.Println("Waiting for a Listenner")
-  select {
-  case <-ctx.Done() :
-    ms.Add(msg)
-    fmt.Println("timed Out 1")
-  case conn := <- q.Listeners :
-    GoodConn := true
-    var recv chan []byte = make(chan []byte , 100 ) 
-    go WaitForJobDone(conn ,msg.Body , recv, &GoodConn ) 
-    select {
-    case <-ctx.Done() : 
-      ms.Add(msg)
-      if GoodConn == true {
-        q.Enqueue(conn)
-      }
-      fmt.Println("timed Out 2")
-    case recived := <-recv :
-      fmt.Println("I recived this : " , string(recived))
-      if GoodConn == true {
-        q.Enqueue(conn)
-      }
-    }
+	select {
+	case <-ctx.Done():
+		ms.Add(msg)
+		fmt.Println("Timed out waiting for work")
+	case conn := <-q.Listeners:
+		go WaitForJobDone(conn, msg.Body, recv, errCh)
 
-
-  }
+		select {
+		case <-ctx.Done():
+			ms.Add(msg)
+			q.Enqueue(conn)
+			fmt.Println("Timed out while waiting for job to finish")
+		case <-recv:
+			fmt.Println("Received acknowledgement")
+			q.Enqueue(conn)
+		case <-errCh:
+			fmt.Println("Removing listener due to error")
+			conn.Close()
+			ms.Add(msg)
+		}
+	}
 }
-
 
 func MakePacket(msgBody []byte) []byte {
-  packetType := byte(7)
-  rLength := byte(2+len(msgBody))
-  mLenght := byte(0) 
-  bLength := byte(len(msgBody))
-  arrByte := []byte{packetType  , rLength , mLenght , bLength }
-  for _, val := range msgBody {
-    arrByte = append(arrByte, val) 
-  }
-  return arrByte
+	packetType := byte(7)
+	rLength := byte(2 + len(msgBody))
+	mLength := byte(0)
+	bLength := byte(len(msgBody))
+	arrByte := []byte{packetType, rLength, mLength, bLength}
+	arrByte = append(arrByte, msgBody...)
+	return arrByte
 }
 
-func WaitForJobDone(conn net.Conn , msg []byte , recv chan []byte , goodConn *bool){
-    fmt.Println("writing")
-    conn.Write(MakePacket(msg)) 
-    b := make([]byte , 40)
-    fmt.Println("starting to read")
-    n , err := conn.Read(b)
-    if n==0 {
-      *goodConn = false
-      fmt.Println("no data to read")
+func WaitForJobDone(conn net.Conn, msg []byte, recv chan int, errCh chan struct{}) {
+	defer close(errCh)
 
-      return 
-    }
-    if err != nil{
-      *goodConn = false
-      return
-    }
-    recv<-b
-    fmt.Println("here")
+	if _, err := conn.Write(MakePacket(msg)); err != nil {
+		errCh <- struct{}{}
+		return
+	}
+
+	b := make([]byte, 40)
+	n, err := conn.Read(b)
+  fmt.Println(n , err)
+	if err != nil {
+		errCh <- struct{}{}
+		return
+	}
+	if n == 0 {
+		errCh <- struct{}{}
+		return
+	}
+
+	recv <- 1
 }
+

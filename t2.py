@@ -1,8 +1,6 @@
 import socket
 import json
 import time
-import random
-import sys
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 1234  # The port used by the server
 
@@ -23,13 +21,11 @@ class Singularity :
         # 5 , len(n)+2 , len(n) , n , 0
         
         packet = bytes([5]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + bytes([0])
-        try :
-            self.connect()
-            self.sock.sendall(packet)
-            ack = self.sock.recv(1024)
-            print(ack)
-        finally :
-            self.disconnect()
+        self.connect()
+        self.sock.sendall(packet)
+        ack = self.sock.recv(1024)
+        print(ack)
+        
     def Publish(self , qname , msg : str ) :
         metadata =json.dumps( {
             "queue":qname
@@ -38,15 +34,11 @@ class Singularity :
 
         packet = bytes([1]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + len(msgByte).to_bytes(2,byteorder="big" ) +msgByte
         
-        try :
-            self.connect()
-            self.sock.sendall(packet)
-            ack = self.sock.recv(1024)
-            print(ack)
-        finally :
-            self.disconnect()
-
-    def Consume(self , qname, job ) :
+        self.connect()
+        self.sock.sendall(packet)
+        ack = self.sock.recv(1024)
+        print(ack)
+    def Consume(self , qname ) :
         metadata =json.dumps( {
             "queue":qname
         }).encode("utf-8")
@@ -59,38 +51,23 @@ class Singularity :
         if int(ack[0]) == 4 :
             print("subscribing")
             while 1 : 
-                msg = self.sock.recv(50)
-                job(msg)
+                job = str(self.sock.recv(50))
+                job = job[4:]
+                print("working on" ,str(job))
+                time.sleep(1)
                 self.sock.sendall(b"ok")
      
-def job(msg:str) :
-    wait = random.randint(0,8)
-    print("working on " ,msg[4:] , " job takes : " , wait)
-    time.sleep(wait) 
 
-
-
+import sys
 sing = Singularity(PORT ,HOST)
-# sing.CreateQueue("someQueue")
+sing.CreateQueue(sys.argv[1])
 # sing.Publish("someQueue" , "hello there 1")
 # sing.Publish("someQueue" , "hello there 2")
 # sing.Publish("someQueue" , "hello there 3")
 
-sing.Consume(sys.argv[1], job)
+n = int(sys.argv[2])
+for i in range(n) :
+    sing = Singularity(PORT ,HOST)
+    sing.Publish(sys.argv[1], "hello there"+str(i))
+# sing.Consume("test")
 
-
-content = bytes([3, 136, 0, 128, 42,10, 123, 10, 34, 113, 117, 101, 117, 101, 34, 32, 58, 32, 34,
-  101, 120, 97, 109, 112, 108, 101, 34, 44, 10, 34, 116, 111, 112,
-  105, 99, 34, 32, 58, 32, 34, 115, 101, 120, 34, 10, 125, 10 ,11, 72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100])
-
-# with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#     s.connect((HOST, PORT))
-#
-#     s.sendall(content)
-#     d = s.recv(1024)
-#     print(d)
-#     if int(d[0]) == 4 :
-#         print("subscribing")
-#         while 1 :
-#             data = s.recv(1024)
-#             print(data)

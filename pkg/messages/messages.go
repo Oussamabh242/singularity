@@ -22,6 +22,6 @@ func (Ms MsgStore) Get() Message {
 
 func NewMessageStore() MsgStore {
   return MsgStore{
-    Store: make(chan Message, 20),
+    Store: make(chan Message, 100),
   }
 }

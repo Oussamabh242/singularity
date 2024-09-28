@@ -14,6 +14,7 @@ type Queue struct {
 }
 
 func (q *Queue) Enqueue(conn net.Conn){
+  fmt.Println("enqueuing")
   q.Listeners <- conn
 }
 

@@ -60,13 +60,11 @@ type Packet struct {
 }
 
 func Parse(packet []byte) Packet {
-  fmt.Println(packet)
 	totalsize := len(packet)
 	parsed := Packet{}   
 	parsed.PacketType = int(packet[0])  
   rLenght, nextByte := getLength(packet, 1) // at most 4 bytes starting from 2nd bit
 	parsed.RLenght = rLenght
-  fmt.Println(rLenght)
 	if rLenght == 0 || nextByte >= totalsize {
 		return parsed
 	}

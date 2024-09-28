@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/Oussamabh242/singularity/pkg/feed"
 	"github.com/Oussamabh242/singularity/pkg/handlers"
 	"github.com/Oussamabh242/singularity/pkg/messages"
