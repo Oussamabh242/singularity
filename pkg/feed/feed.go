@@ -1,4 +1,3 @@
-
 package feed
 
 import (
@@ -8,14 +7,21 @@ import (
 	"time"
 
 	"github.com/Oussamabh242/singularity/pkg/messages"
+	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
 )
+
+/*
+ * this a gourinte that will work in parallel
+ * it starts by dequeuing a message look for a Queue listener
+ * if a listener exists we send the message to sub and wait for
+ * response otherwise the message is reEnqueued .
+ */
 
 func FeedMessages(qs *queue.QStore, ms *messages.MsgStore) {
 	for {
 		msg := ms.Get()
 		q, _ := qs.GetQueue(msg.Queue)
-		fmt.Println(len(q.Listeners))
 		if len(q.Listeners) > 0 {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			go func(ctx context.Context, cancel context.CancelFunc, msg messages.Message) {
@@ -24,11 +30,25 @@ func FeedMessages(qs *queue.QStore, ms *messages.MsgStore) {
 			}(ctx, cancel, msg)
 		} else {
 			ms.Add(msg)
-
 		}
 	}
 }
 
+/*
+  - AwaitForWork extract a listner and gets a message wait for the message
+    to be done by one of the queue subscribers in case of reciving ack from
+    listener * the listener is reEnqueued to the queue's Listeners
+  - listen on the error channel if an error occurs the listener will not be
+    reEnqueued
+  - if context is timedOut both the listener and the message are reEnqueued
+
+ARGS :
+
+ctx : context : if done the message is reEnqueued
+q   : @Queue  : reference to the queue that corresponds to the message
+ms  : messageStore
+msg : Message
+*/
 func AwaitForWork(ctx context.Context, q *queue.Queue, ms *messages.MsgStore, msg messages.Message) {
 	var recv = make(chan int)
 	var errCh = make(chan struct{})
@@ -36,9 +56,9 @@ func AwaitForWork(ctx context.Context, q *queue.Queue, ms *messages.MsgStore, ms
 	select {
 	case <-ctx.Done():
 		ms.Add(msg)
-		fmt.Println("Timed out waiting for work")
+		fmt.Println("Timed out waiting for a listener")
 	case conn := <-q.Listeners:
-		go WaitForJobDone(conn, msg.Body, recv, errCh)
+		go WaitForAck(conn, msg.Body, recv, errCh)
 
 		select {
 		case <-ctx.Done():
@@ -56,17 +76,12 @@ func AwaitForWork(ctx context.Context, q *queue.Queue, ms *messages.MsgStore, ms
 	}
 }
 
-func MakePacket(msgBody []byte) []byte {
-	packetType := byte(7)
-	rLength := byte(2 + len(msgBody))
-	mLength := byte(0)
-	bLength := byte(len(msgBody))
-	arrByte := []byte{packetType, rLength, mLength, bLength}
-	arrByte = append(arrByte, msgBody...)
-	return arrByte
-}
-
-func WaitForJobDone(conn net.Conn, msg []byte, recv chan int, errCh chan struct{}) {
+/*
+ * WaitForAck sends a packet  that contains the message to a listener
+ * wait for ack from the listener
+ * for reading error from the listener (conn closed)
+ */
+func WaitForAck(conn net.Conn, msg []byte, recv chan int, errCh chan struct{}) {
 	defer close(errCh)
 
 	if _, err := conn.Write(MakePacket(msg)); err != nil {
@@ -76,7 +91,7 @@ func WaitForJobDone(conn net.Conn, msg []byte, recv chan int, errCh chan struct{
 
 	b := make([]byte, 40)
 	n, err := conn.Read(b)
-  fmt.Println(n , err)
+	fmt.Println(n, err)
 	if err != nil {
 		errCh <- struct{}{}
 		return
@@ -89,3 +104,16 @@ func WaitForJobDone(conn net.Conn, msg []byte, recv chan int, errCh chan struct{
 	recv <- 1
 }
 
+/*
+  - organize a packet of type JOB that contains the lenght
+    of the message and the actual message
+*/
+func MakePacket(msgBody []byte) []byte {
+	packetType := byte(parser.JOB)
+	rLength := byte(2 + len(msgBody))
+	mLength := byte(0)
+	bLength := byte(len(msgBody))
+	arrByte := []byte{packetType, rLength, mLength, bLength}
+	arrByte = append(arrByte, msgBody...)
+	return arrByte
+}

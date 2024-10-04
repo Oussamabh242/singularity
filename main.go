@@ -13,30 +13,29 @@ import (
 	"os"
 )
 
-func handleConnection(conn net.Conn , qs *queue.QStore , ms *messages.MsgStore) {
+// parse packet type and assign it to a specified handler
+func handleConnection(conn net.Conn, qs *queue.QStore, ms *messages.MsgStore) {
 	b := make([]byte, 1024)
 	conn.Read(b)
 	thing := parser.Parse(b)
-  switch thing.PacketType {
-  case parser.PING :
-    handlers.HandlePing(conn)
-    break
-  case parser.PUBLISH :
-    handlers.HandlePublish(conn , &thing, qs , ms)
-    break
-  case parser.CREATEQUEUE :
-    handlers.HandlerCreateQueue(conn  , &thing , qs)
-    break
+	switch thing.PacketType {
+	case parser.PING:
+		handlers.HandlePing(conn)
+		break
+	case parser.PUBLISH:
+		handlers.HandlePublish(conn, &thing, qs, ms)
+		break
+	case parser.CREATEQUEUE:
+		handlers.HandlerCreateQueue(conn, &thing, qs)
+		break
 
-  case parser.SUBSCRIBE :
-    handlers.HandleSubscribe(conn , &thing , qs )
-    break
+	case parser.SUBSCRIBE:
+		handlers.HandleSubscribe(conn, &thing, qs)
+		break
 
-  default :
-    fmt.Println("UNKNOWN")
-  }
-
-
+	default:
+		fmt.Println("UNKNOWN")
+	}
 }
 
 func main() {
@@ -49,17 +48,17 @@ func main() {
 	if err != nil {
 		log.Panic("error starting the socket ", err)
 	}
-  
-  qs := queue.NewQStore()
-  qs.CreateQueue("q")
-  mStore := messages.NewMessageStore()
-  go feed.FeedMessages(&qs , &mStore)
+
+	qs := queue.NewQStore()
+	qs.CreateQueue("q")
+	mStore := messages.NewMessageStore()
+	go feed.FeedMessages(&qs, &mStore)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Println("error establishing connection : ", err)
 		}
-		go handleConnection(conn , &qs , &mStore)
+		go handleConnection(conn, &qs, &mStore)
 
 	}
 }

@@ -2,22 +2,21 @@ package parser
 
 /*
   ***
-    the job of this package is to parse or transform incomming array of bytes 
+    the job of this package is to parse or transform incomming array of bytes
     (packet) into a struct to deal with it later
   ***
 
   ** Packet Structure **
-      
+
       1 Byte      2 Byte          2 Byte
   +---------------+----------------+----------------+
   |packet type    |remainingLenght |metadata length |
   +---------------|----------------|----------------|
   | Metadata      | message length |  message       |
   +---------------+----------------+----------------+
-  0->(2^16)-3 Byte     2 Byte       0->(2^16)-3 Byte  
+  0->(2^16)-3 Byte     2 Byte       0->(2^16)-3 Byte
 
 */
-
 
 import (
 	"bytes"
@@ -27,21 +26,21 @@ import (
 )
 
 const (
-	PUBLISH     = 1 // Publish
-  ACKRECIVE   = 2 // Acknowledge Publishing
-	SUBSCRIBE   = 3 // Subscribe to Queue
-  ACKSUBSCRIBE= 4
-	CREATEQUEUE = 5
-  ACKQREATE   = 6
-  JOB         = 7
-  ACKJOB      = 8
-	PING        = 100
+	PUBLISH      = 1 // Publish
+	ACKRECIVE    = 2 // Acknowledge Publishing
+	SUBSCRIBE    = 3 // Subscribe to Queue
+	ACKSUBSCRIBE = 4
+	CREATEQUEUE  = 5
+	ACKQREATE    = 6
+	JOB          = 7
+	ACKJOB       = 8
+	PING         = 100
 
 	BYTE_MASK = 0x7F
 )
 
-// the Metadata is conserned with everything that is not the messgae 
-// queue name , topic , message Content Type , message for the consumer 
+// the Metadata is conserned with everything that is not the messgae
+// queue name , topic , message Content Type , message for the consumer
 // Acknowledgement
 
 type Metadata struct {
@@ -60,10 +59,12 @@ type Packet struct {
 }
 
 func Parse(packet []byte) Packet {
+	// Parses the incomming bytes into a struct
+
 	totalsize := len(packet)
-	parsed := Packet{}   
-	parsed.PacketType = int(packet[0])  
-  rLenght, nextByte := getLength(packet, 1) // at most 4 bytes starting from 2nd bit
+	parsed := Packet{}
+	parsed.PacketType = int(packet[0])
+	rLenght, nextByte := getLength(packet, 1) // at most 4 bytes starting from 2nd bit
 	parsed.RLenght = rLenght
 	if rLenght == 0 || nextByte >= totalsize {
 		return parsed
@@ -90,40 +91,40 @@ func Parse(packet []byte) Packet {
 
 }
 
-
 /*
-  * transforming the bytes designed to the metadata which is a json 
-  * to a struct 
-*/
+ * transforming the bytes designed to the metadata which is a json
+ * to a struct
+ */
 func parseMetadata(packet []byte, start int, length uint) (Metadata, int) {
 	md := Metadata{}
 	json.Unmarshal(packet[start:start+int(length)], &md)
 	return md, start + int(length)
 }
 
-/** 
- * get the remaining Length using the variable Length encoding
- * all the lengths gonna be maxed to two bytes which will make 
-   the max lenght 2^16
- * the length is expected to be encoded in two bytes eg: 
-  encoding 1024 should give us first byte : 4 , second 0 ( 00000100 00000000)
+/*
+*
+  - get the remaining Length using the variable Length encoding
+  - all the lengths gonna be maxed to two bytes which will make
+    the max lenght 2^16
+  - the length is expected to be encoded in two bytes eg:
+    encoding 1024 should give us first byte : 4 , second 0 ( 00000100 00000000)
 */
 func getLength(sequence []byte, start int) (uint, int) {
 
-  arr := []byte{sequence[start ] ,sequence[start +1]} 
-  var num uint16
-  err := binary.Read(bytes.NewReader(arr),binary.BigEndian, &num)
-  if err != nil{
-    fmt.Println(err)
-    return 0 , start+2
-  }
-  return uint(num) , start+2
+	arr := []byte{sequence[start], sequence[start+1]}
+	var num uint16
+	err := binary.Read(bytes.NewReader(arr), binary.BigEndian, &num)
+	if err != nil {
+		fmt.Println(err)
+		return 0, start + 2
+	}
+	return uint(num), start + 2
 }
 
 /*
  * get the content that based on its lenght
- * 
-*/
+ *
+ */
 func getString(packet []byte, start int, length uint) (string, int) {
 	str := []byte{}
 	for i := start; i < start+int(length); i++ {
@@ -132,5 +133,3 @@ func getString(packet []byte, start int, length uint) (string, int) {
 	return string(str), start + int(length)
 
 }
-
-
