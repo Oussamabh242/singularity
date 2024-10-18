@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/Oussamabh242/singularity/pkg/feed"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
 )
@@ -27,9 +28,9 @@ func HandlerCreateQueue(conn net.Conn, parsed *parser.Packet, qs *queue.QStore) 
 		conn.Write([]byte("error creating a queue"))
 		return
 	}
-	qs.CreateQueue(parsed.Metadata.Queue)
-	q, _ := qs.Queues.Load(queueName)
+  q := qs.CreateQueue(parsed.Metadata.Queue)
 	fmt.Println("new queue created :", q)
+  go feed.FeedMessages(q) 
 	AckQueueCreate(conn)
 	return
 }
