@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/Oussamabh242/singularity/pkg/feed"
+	// "github.com/Oussamabh242/singularity/pkg/feed"
 	"github.com/Oussamabh242/singularity/pkg/handlers"
-	"github.com/Oussamabh242/singularity/pkg/messages"
+	// "github.com/Oussamabh242/singularity/pkg/messages"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
 
@@ -14,7 +14,7 @@ import (
 )
 
 // parse packet type and assign it to a specified handler
-func handleConnection(conn net.Conn, qs *queue.QStore, ms *messages.MsgStore) {
+func handleConnection(conn net.Conn, qs *queue.QStore) {
 	b := make([]byte, 1024)
 	conn.Read(b)
 	thing := parser.Parse(b)
@@ -23,7 +23,7 @@ func handleConnection(conn net.Conn, qs *queue.QStore, ms *messages.MsgStore) {
 		handlers.HandlePing(conn)
 		break
 	case parser.PUBLISH:
-		handlers.HandlePublish(conn, &thing, qs, ms)
+		handlers.HandlePublish(conn, &thing, qs)
 		break
 	case parser.CREATEQUEUE:
 		handlers.HandlerCreateQueue(conn, &thing, qs)
@@ -51,14 +51,12 @@ func main() {
 
 	qs := queue.NewQStore()
 	qs.CreateQueue("q")
-	mStore := messages.NewMessageStore()
-	go feed.FeedMessages(&qs, &mStore)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Println("error establishing connection : ", err)
 		}
-		go handleConnection(conn, &qs, &mStore)
+		go handleConnection(conn, &qs)
 
 	}
 }

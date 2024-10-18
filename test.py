@@ -64,8 +64,11 @@ class Singularity :
                 self.sock.sendall(b"ok")
      
 def job(msg:str) :
-    wait = random.randint(0,8) 
+    wait = random.randint(0,5) 
+    print("working on " , msg , wait)
+
     time.sleep(wait) 
+    time.sleep(31) 
     print("job on " ,msg[4:] , " took : " , wait , "seconds")
 
 

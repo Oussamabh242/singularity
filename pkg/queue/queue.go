@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+  "github.com/Oussamabh242/singularity/pkg/messages"
 )
 
 type Listener net.Conn
@@ -14,6 +15,7 @@ type Listener net.Conn
 */
 type Queue struct {
 	Listeners chan Listener
+  Messages chan messages.Message
 }
 
 /*
@@ -46,11 +48,13 @@ func NewQStore() QStore {
 }
 
 // add a queue inside the QueueStore with max 20 Listener
-func (qs *QStore) CreateQueue(name string) {
+func (qs *QStore) CreateQueue(name string) (*Queue) {
 	q := Queue{
 		Listeners: make(chan Listener, 20),
+    Messages : make (chan messages.Message ,100 ) ,
 	}
 	qs.Queues.Store(name, &q)
+  return &q
 }
 
 // retrieve a reference to a Queue based on its name or an error
