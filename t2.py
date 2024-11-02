@@ -38,6 +38,7 @@ class Singularity :
         self.sock.sendall(packet)
         ack = self.sock.recv(1024)
         print(ack)
+        self.disconnect()
     def Consume(self , qname ) :
         metadata =json.dumps( {
             "queue":qname

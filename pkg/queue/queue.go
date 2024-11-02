@@ -24,7 +24,9 @@ type Queue struct {
     when provided with its name of type map[string]*Queue
 */
 type QStore struct {
-	Queues sync.Map
+	Queues        sync.Map
+	maxListenners int
+	maxMessages   int
 }
 
 // adds a Connection to the Listeners
@@ -43,16 +45,22 @@ func (q *Queue) Channel() chan Listener {
 }
 
 // initialize a QueueStore
-func NewQStore() QStore {
-	return QStore{}
+func NewQStore(maxSubscribers int, maxMessages int) QStore {
+	fmt.Println("here ", maxSubscribers, maxMessages)
+	return QStore{
+		maxListenners: maxSubscribers,
+		maxMessages:   maxMessages,
+	}
+
 }
 
 // add a queue inside the QueueStore with max 20 Listener
 func (qs *QStore) CreateQueue(name string) *Queue {
 	q := Queue{
-		Listeners: make(chan Listener, 20),
-		Messages:  make(chan messages.Message, 100),
+		Listeners: make(chan Listener, qs.maxListenners),
+		Messages:  make(chan messages.Message, qs.maxMessages),
 	}
+	fmt.Println("cap", cap(q.Listeners), cap(q.Messages))
 	qs.Queues.Store(name, &q)
 	return &q
 }
