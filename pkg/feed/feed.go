@@ -13,37 +13,32 @@ import (
 
 /*
  * this a gourinte that will work in parallel
- * it keeps waiting for a listenner 
- * if there is a listenner it waits for a message 
+ * it keeps waiting for a listenner
+ * if there is a listenner it waits for a message
  * it sends sends the message to the listenner (consumer)
  */
 
+func FeedMessages(q *queue.Queue) {
+	for {
+		select {
+		case conn := <-q.Listeners:
 
+			select {
+			case msg := <-q.Messages:
 
-func FeedMessages(q *queue.Queue)  {
-  for {
-    select { 
-    case conn := <-q.Listeners :
+				go func(conn queue.Listener, msg messages.Message) {
 
-      select {
-      case  msg := <- q.Messages :
-        
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+					fmt.Println(ctx.Deadline())
+					defer cancel()
+					AwaitForWork(ctx, q, conn, msg)
 
-        go func( conn queue.Listener , msg messages.Message) {
+				}(conn, msg)
+			}
 
-          ctx , cancel := context.WithTimeout(context.Background() ,time.Second*30)
-          fmt.Println(ctx.Deadline())
-          defer cancel()
-          AwaitForWork(ctx ,q ,conn ,msg)
-   
-        }( conn , msg)
-      }
-
-    }
-  } 
+		}
+	}
 }
-
-
 
 /*
   - AwaitForWork extract a listner and gets a message wait for the message
@@ -60,25 +55,25 @@ q   : @Queue  : reference to the queue that corresponds to the message
 conn: q.Listener (net.Conn)
 msg : Message
 */
-func AwaitForWork(ctx context.Context, q *queue.Queue,conn net.Conn , msg messages.Message) {
+func AwaitForWork(ctx context.Context, q *queue.Queue, conn net.Conn, msg messages.Message) {
 	var recv = make(chan int)
 	var errCh = make(chan struct{})
-  
+
 	go WaitForAck(conn, msg.Body, recv, errCh)
 
-  select {
-  case <-ctx.Done():
-    q.Messages <- msg 
-    q.Enqueue(conn)
-    fmt.Println("Timed out while waiting for job to finish")
-  case <-recv:
-    fmt.Println("Received acknowledgement")
-    q.Enqueue(conn)
-  case <-errCh:
-    fmt.Println("Removing listener due to error")
-    conn.Close()
-    q.Messages <- msg
-  }
+	select {
+	case <-ctx.Done():
+		q.Messages <- msg
+		q.Enqueue(conn)
+		fmt.Println("Timed out while waiting for job to finish")
+	case <-recv:
+		fmt.Println("Received acknowledgement")
+		q.Enqueue(conn)
+	case <-errCh:
+		fmt.Println("Removing listener due to error")
+		conn.Close()
+		q.Messages <- msg
+	}
 }
 
 /*

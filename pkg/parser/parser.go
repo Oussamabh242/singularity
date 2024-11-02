@@ -60,18 +60,19 @@ type Packet struct {
 
 func Parse(packet []byte) Packet {
 	// Parses the incomming bytes into a struct
-
 	totalsize := len(packet)
 	parsed := Packet{}
 	parsed.PacketType = int(packet[0])
-	rLenght, nextByte := getLength(packet, 1) // at most 4 bytes starting from 2nd bit
-	parsed.RLenght = rLenght
+	rLenght := intify(packet[1:3]) // at most 2 bytes
+	parsed.RLenght = uint(rLenght)
+	nextByte := 3
 	if rLenght == 0 || nextByte >= totalsize {
 		return parsed
 	}
 
-	mLength, nextByte := getLength(packet, nextByte) // at most 2 bytes
+	mLength := intify(packet[nextByte : nextByte+2]) // at most 2 bytes
 	parsed.MetadataLen = mLength
+	nextByte = nextByte + 2
 	if mLength > 0 {
 		var metadata Metadata
 		metadata, nextByte = parseMetadata(packet, nextByte, mLength)
@@ -80,13 +81,14 @@ func Parse(packet []byte) Packet {
 	if nextByte >= totalsize {
 		return parsed
 	}
-	pLength, nextByte := getLength(packet, nextByte)
+	pLength := intify(packet[nextByte : nextByte+2])
 	parsed.PayloadLen = pLength
+	nextByte = nextByte + 2
 	if pLength > 0 {
 		payload, _ := getString(packet, nextByte, pLength)
 		parsed.Payload = payload
 	}
-
+	fmt.Println(parsed)
 	return parsed
 
 }

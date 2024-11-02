@@ -29,7 +29,7 @@ func HandlePublish(conn net.Conn, parsed *parser.Packet, qs *queue.QStore) {
 		Queue: parsed.Metadata.Queue,
 		Topic: parsed.Metadata.Topic,
 	}
-  q.Messages <- msg
+	q.Messages <- msg
 	fmt.Println("writing msg : ", parsed.Payload, len(q.Messages))
 	AckPublish(conn)
 	return

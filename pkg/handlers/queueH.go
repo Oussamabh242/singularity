@@ -28,9 +28,9 @@ func HandlerCreateQueue(conn net.Conn, parsed *parser.Packet, qs *queue.QStore) 
 		conn.Write([]byte("error creating a queue"))
 		return
 	}
-  q := qs.CreateQueue(parsed.Metadata.Queue)
+	q := qs.CreateQueue(parsed.Metadata.Queue)
 	fmt.Println("new queue created :", q)
-  go feed.FeedMessages(q) 
+	go feed.FeedMessages(q)
 	AckQueueCreate(conn)
 	return
 }

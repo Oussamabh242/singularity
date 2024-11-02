@@ -32,7 +32,7 @@ class Singularity :
         }).encode("utf-8")
         msgByte = msg.encode("utf-8")
 
-        packet = bytes([1]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + len(msgByte).to_bytes(2,byteorder="big" ) +msgByte
+        packet = bytes([1]) + (4660).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + len(msgByte).to_bytes(2,byteorder="big" ) +msgByte
         
         self.connect()
         self.sock.sendall(packet)

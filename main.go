@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	// "github.com/Oussamabh242/singularity/pkg/feed"
 	"github.com/Oussamabh242/singularity/pkg/handlers"
-	// "github.com/Oussamabh242/singularity/pkg/messages"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
 
@@ -16,8 +14,13 @@ import (
 // parse packet type and assign it to a specified handler
 func handleConnection(conn net.Conn, qs *queue.QStore) {
 	b := make([]byte, 1024)
-	conn.Read(b)
-	thing := parser.Parse(b)
+	length, err := conn.Read(b)
+	if err != nil {
+		fmt.Println("error reading message", err)
+		conn.Close()
+		return
+	}
+	thing := parser.Parse(b[:length])
 	switch thing.PacketType {
 	case parser.PING:
 		handlers.HandlePing(conn)
@@ -50,7 +53,6 @@ func main() {
 	}
 
 	qs := queue.NewQStore()
-	qs.CreateQueue("q")
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
