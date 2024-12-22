@@ -8,9 +8,9 @@ package parser
 
   ** Packet Structure **
 
-      1 Byte      2 Byte          2 Byte
+      1 Byte          4 Byte          2 Byte
   +---------------+----------------+----------------+
-  |packet type    |remainingLenght |metadata length |
+  |packet type    |remainingLength |metadata length |
   +---------------|----------------|----------------|
   | Metadata      | message length |  message       |
   +---------------+----------------+----------------+
@@ -19,10 +19,9 @@ package parser
 */
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 const (
@@ -37,6 +36,13 @@ const (
 	PING         = 100
 
 	BYTE_MASK = 0x7F
+
+  // Parts indexes 
+  PACKET_HEAD_START = 1
+  PACKET_HEAD_END   = 5// 5 bytes (1 => type  , 4 => remaining length)
+  META_LENGTH_START = 5 
+  META_LENGTH_END   = 7 
+
 )
 
 // the Metadata is conserned with everything that is not the messgae
@@ -55,83 +61,104 @@ type Packet struct {
 	MetadataLen uint
 	Metadata    Metadata
 	PayloadLen  uint
-	Payload     string
+	Payload     []byte
 }
 
+
+
 func Parse(packet []byte) Packet {
+  
 	// Parses the incomming bytes into a struct
-	totalsize := len(packet)
+  totalsize := len(packet)
+
+  fmt.Println("recived: " , packet)
 	parsed := Packet{}
 	parsed.PacketType = int(packet[0])
-	rLenght := intify(packet[1:3]) // at most 2 bytes
-	parsed.RLenght = uint(rLenght)
-	nextByte := 3
-	if rLenght == 0 || nextByte >= totalsize {
+	rLength := Intify[uint32](packet[PACKET_HEAD_START:PACKET_HEAD_END]) // at most 4 bytes
+	parsed.RLenght = uint(rLength)
+  fmt.Println("--- reaining Length is " ,rLength ) // next Byte 5
+	if rLength == 0 || len(packet)<PACKET_HEAD_END {
 		return parsed
 	}
-
-	mLength := intify(packet[nextByte : nextByte+2]) // at most 2 bytes
-	parsed.MetadataLen = mLength
-	nextByte = nextByte + 2
-	if mLength > 0 {
-		var metadata Metadata
-		metadata, nextByte = parseMetadata(packet, nextByte, mLength)
-		parsed.Metadata = metadata
-	}
-	if nextByte >= totalsize {
+	mLength := Intify[uint16](packet[META_LENGTH_START: META_LENGTH_END]) // at most 2 bytes
+	parsed.MetadataLen = uint(mLength)
+  fmt.Println("-- metadata Length is ", mLength)
+  if mLength ==0 {
+    return parsed
+  }
+  md, err := extractMetadata(packet[META_LENGTH_END: META_LENGTH_END+mLength])
+  if err != nil{
+    log.Print("Error Decoding Metadata" , err)
+  }
+  parsed.Metadata = md
+  fmt.Println(md)
+  nextByte := META_LENGTH_END+uint(mLength) 
+      
+	if nextByte>= uint(totalsize) {
 		return parsed
 	}
-	pLength := intify(packet[nextByte : nextByte+2])
-	parsed.PayloadLen = pLength
+	pLength := Intify[uint16](packet[nextByte : nextByte+2])
+	parsed.PayloadLen = uint(pLength)
+  fmt.Println("-- Payload Length is " , pLength)
 	nextByte = nextByte + 2
-	if pLength > 0 {
-		payload, _ := getString(packet, nextByte, pLength)
-		parsed.Payload = payload
-	}
+	if pLength == 0 {
+		return parsed	
+  }
+  parsed.Payload = packet[nextByte : nextByte+uint(pLength)]
+  fmt.Println("-- msg is " , string(parsed.Payload))
 	fmt.Println(parsed)
 	return parsed
 
 }
+// func Parse(packet []byte) Packet {
+// 	// Parses the incomming bytes into a struct
+//   fmt.Println("recived: " , packet)
+// 	totalsize := len(packet)
+// 	parsed := Packet{}
+// 	parsed.PacketType = int(packet[0])
+// 	rLength := Intify[uint32](packet[1:5]) // at most 4 bytes
+// 	parsed.RLenght = uint(rLength)
+//   fmt.Println("--- reaining Length is " ,rLength )
+// 	nextByte := 5
+// 	if rLength == 0 || nextByte >= totalsize {
+// 		return parsed
+// 	}
+//
+// 	mLength := Intify[uint16](packet[nextByte : nextByte+2]) // at most 2 bytes
+// 	parsed.MetadataLen = uint(mLength)
+//   fmt.Println("-- metadata Length is ", mLength ,packet[nextByte : nextByte+2])
+// 	nextByte = nextByte + 2
+// 	if mLength > 0 {
+// 		var metadata Metadata
+// 		metadata, nextByte = parseMetadata(packet, nextByte, uint(mLength))
+// 		parsed.Metadata = metadata
+// 	}
+// 	if nextByte >= totalsize {
+// 		return parsed
+// 	}
+// 	pLength := Intify[uint16](packet[nextByte : nextByte+2])
+// 	parsed.PayloadLen = uint(pLength)
+// 	nextByte = nextByte + 2
+// 	if pLength > 0 {
+// 		payload, _ := getString(packet, nextByte, uint(pLength))
+// 		parsed.Payload = payload
+// 	}
+// 	fmt.Println(parsed)
+// 	return parsed
+//
+// }
+
 
 /*
  * transforming the bytes designed to the metadata which is a json
  * to a struct
  */
-func parseMetadata(packet []byte, start int, length uint) (Metadata, int) {
-	md := Metadata{}
-	json.Unmarshal(packet[start:start+int(length)], &md)
-	return md, start + int(length)
+func extractMetadata(arr []byte ) (Metadata , error)  {
+  md := Metadata{}
+  err := json.Unmarshal(arr, &md)
+  if err != nil{
+    return md , err
+  }
+	return md , nil  
 }
 
-/*
-*
-  - get the remaining Length using the variable Length encoding
-  - all the lengths gonna be maxed to two bytes which will make
-    the max lenght 2^16
-  - the length is expected to be encoded in two bytes eg:
-    encoding 1024 should give us first byte : 4 , second 0 ( 00000100 00000000)
-*/
-func getLength(sequence []byte, start int) (uint, int) {
-
-	arr := []byte{sequence[start], sequence[start+1]}
-	var num uint16
-	err := binary.Read(bytes.NewReader(arr), binary.BigEndian, &num)
-	if err != nil {
-		fmt.Println(err)
-		return 0, start + 2
-	}
-	return uint(num), start + 2
-}
-
-/*
- * get the content that based on its lenght
- *
- */
-func getString(packet []byte, start int, length uint) (string, int) {
-	str := []byte{}
-	for i := start; i < start+int(length); i++ {
-		str = append(str, packet[i])
-	}
-	return string(str), start + int(length)
-
-}

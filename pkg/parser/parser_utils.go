@@ -3,15 +3,22 @@ package parser
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"strconv"
 )
 
-func intify(x []byte) uint {
+// intify a generic function that takes an array of bytes and return
+// its encoding into INTS or UNITS
+func Intify[T any](x []byte  ) T {
 	buf := bytes.NewReader(x)
-	var num int16
-	binary.Read(buf, binary.BigEndian, &num)
+	var num T
 
-	return uint(num)
+  err := binary.Read(buf, binary.BigEndian, &num)
+  if err != nil{
+    fmt.Println("error" , err)
+  }
+
+	return num
 }
 
 func byteToBinary(integer byte) string {

@@ -1,14 +1,16 @@
 package cmd
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"log"
+	"net"
+
 	"github.com/Oussamabh242/singularity/pkg/handlers"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
-
-	"fmt"
 	"github.com/spf13/cobra"
-	"log"
-	"net"
 	// "os"
 )
 
@@ -38,14 +40,29 @@ func init() {
 // parse packet type and assign it to a specified handler
 func handleConnection(conn net.Conn, qs *queue.QStore) {
 
-	b := make([]byte, 1024)
-	length, err := conn.Read(b)
+  type_length := make([]byte , 5)
+  _ , err := conn.Read(type_length) 
+  if err != nil{
+    log.Println("Error while reading first bytes" , err)
+    conn.Close()
+    return
+  }
+
+  rLength:= parser.Intify[uint32](type_length[1:5])
+  if err != nil{
+    log.Println("Error reading Type and length into var" , err)
+    conn.Close()
+    return
+  }
+  
+  remaining := make([]byte , rLength)
+	_, err = conn.Read(remaining)
 	if err != nil {
-		fmt.Println("error reading message", err)
+		log.Println("error reading message", err)
 		conn.Close()
 		return
 	}
-	thing := parser.Parse(b[:length])
+	thing := parser.Parse(append(type_length , remaining...))
 	switch thing.PacketType {
 	case parser.PING:
 		handlers.HandlePing(conn)

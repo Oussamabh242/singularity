@@ -18,7 +18,9 @@ func TestParse(t *testing.T) {
 		metadataStruct, _ := json.Marshal(metadata)
 		message := ""
 		res := Encode(uint8(packettype), metadataStruct, []byte(message))
-		t.Errorf("\n\n%v\n%v", res, string(metadataStruct))
+    parse := parser.Parse(res)    
+
+		t.Errorf("\n\n%v\n%v\n%v", res, string(metadataStruct),parse )
 
 	})
 }

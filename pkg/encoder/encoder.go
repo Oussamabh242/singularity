@@ -28,8 +28,8 @@ func Encode(packetType uint8, metadata []byte, message []byte) []byte {
 	rLength := 2 + len(metadata) + 2 + len(message)
 	packet := make([]byte, 0)
 
-	rLengthByte := make([]byte, 2)
-	binary.BigEndian.PutUint16(rLengthByte, uint16(rLength))
+	rLengthByte := make([]byte, 4)
+	binary.BigEndian.PutUint32(rLengthByte, uint32(rLength))
 
 	metadataByte := make([]byte, 2)
 	binary.BigEndian.PutUint16(metadataByte, uint16(len(metadata)))
