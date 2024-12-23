@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -89,8 +87,8 @@ func startServer(PORT string, maxSubscribers int, maxMessages int) {
 	// if len(PORT) == 0 {
 	// 	PORT = "1234"
 	// }
-	fmt.Println(PORT)
 	ln, err := net.Listen("tcp", ":"+PORT)
+  fmt.Println("Listenning on port" , PORT)
 	if err != nil {
 		log.Panic("error starting the socket ", err)
 	}

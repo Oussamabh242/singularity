@@ -9,6 +9,7 @@ import (
 	"github.com/Oussamabh242/singularity/pkg/messages"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
+  "github.com/Oussamabh242/singularity/pkg/encoder"
 )
 
 /*
@@ -17,7 +18,6 @@ import (
  * if there is a listenner it waits for a message
  * it sends sends the message to the listenner (consumer)
  */
-
 func FeedMessages(q *queue.Queue) {
 	for {
 		select {
@@ -29,7 +29,6 @@ func FeedMessages(q *queue.Queue) {
 				go func(conn queue.Listener, msg messages.Message) {
 
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-					fmt.Println(ctx.Deadline())
 					defer cancel()
 					AwaitForWork(ctx, q, conn, msg)
 
@@ -84,7 +83,8 @@ func AwaitForWork(ctx context.Context, q *queue.Queue, conn net.Conn, msg messag
 func WaitForAck(conn net.Conn, msg []byte, recv chan int, errCh chan struct{}) {
 	defer close(errCh)
 
-	if _, err := conn.Write(MakePacket(msg)); err != nil {
+  packet := encoder.Encode(parser.JOB ,[]byte{} ,msg)
+	if _, err := conn.Write(packet); err != nil {
 		errCh <- struct{}{}
 		return
 	}

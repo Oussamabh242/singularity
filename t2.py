@@ -4,6 +4,12 @@ import time
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 1234  # The port used by the server
 
+def encoder(metadata :dict, message:str, type:int ):
+    marshalled_metadata =json.dumps( metadata).encode("utf-8")
+    
+    packet = bytes([type]) + (len(marshalled_metadata) + len(message) + 2 + 2).to_bytes(4, "big") + len(marshalled_metadata).to_bytes(2, "big") + marshalled_metadata + len(message).to_bytes(2, "big") + message.encode("utf-8")
+
+    return packet 
 
 class Singularity :
     def __init__(self , port , host) -> None:
@@ -15,25 +21,22 @@ class Singularity :
     def disconnect(self) :
         self.sock.close()
     def CreateQueue(self , qname ) :
-        metadata =json.dumps( {
+        metadata = {
             "queue":qname
-        }).encode("utf-8")
-        # 5 , len(n)+2 , len(n) , n , 0
+        }        # 5 , len(n)+2 , len(n) , n , 0
         
-        packet = bytes([5]) + len(metadata).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + bytes([0])
+        packet =encoder(metadata ,"" , 5) 
         self.connect()
         self.sock.sendall(packet)
         ack = self.sock.recv(1024)
         print(ack)
         
     def Publish(self , qname , msg : str ) :
-        metadata =json.dumps( {
+        metadata ={
             "queue":qname
-        }).encode("utf-8")
-        msgByte = msg.encode("utf-8")
+        }
 
-        packet = bytes([1]) + (4660).to_bytes(2, byteorder='big') + len(metadata).to_bytes(2, byteorder='big') +metadata + len(msgByte).to_bytes(2,byteorder="big" ) +msgByte
-        
+        packet = encoder(metadata , msg ,1)
         self.connect()
         self.sock.sendall(packet)
         ack = self.sock.recv(1024)
