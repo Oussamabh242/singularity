@@ -4,13 +4,13 @@ package handlers
 import (
 	"fmt"
 	"net"
-
 	"github.com/Oussamabh242/singularity/pkg/feed"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
+  "github.com/Oussamabh242/singularity/pkg/encoder"
 )
 
-var ACKCREATE []byte = []byte{parser.ACKQREATE, 0, 0, 0}
+var ACKCREATE []byte = []byte{parser.ACKQREATE, 0, 0, 0,0}
 
 /*
  * Create a queue inside the queue Store
@@ -21,7 +21,8 @@ func HandlerCreateQueue(conn net.Conn, parsed *parser.Packet, qs *queue.QStore) 
 	queueName := parsed.Metadata.Queue
 	_, ok := qs.GetQueue(queueName)
 	if ok == nil {
-		return
+		AckQueueCreate(conn)
+    return
 	}
 
 	if len(queueName) == 0 {
@@ -29,12 +30,12 @@ func HandlerCreateQueue(conn net.Conn, parsed *parser.Packet, qs *queue.QStore) 
 		return
 	}
 	q := qs.CreateQueue(parsed.Metadata.Queue)
-	fmt.Println("new queue created :", q)
+	fmt.Println("new queue created :",parsed.Metadata.Queue, parsed.Metadata)
 	go feed.FeedMessages(q)
 	AckQueueCreate(conn)
 	return
 }
 
 func AckQueueCreate(conn net.Conn) {
-	conn.Write(ACKCREATE)
+	conn.Write(encoder.Encode(parser.ACKQREATE ,[]byte{} , []byte{}))
 }

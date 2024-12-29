@@ -20,6 +20,7 @@ func HandleSubscribe(conn net.Conn, parsed *parser.Packet, qs *queue.QStore) {
 	q, err := qs.GetQueue(parsed.Metadata.Queue)
 	if err != nil {
 		conn.Write([]byte("error subscribing no queue"))
+    return
 	}
 	q.Enqueue(conn)
 	ackSubs(conn)

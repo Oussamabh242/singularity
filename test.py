@@ -35,7 +35,6 @@ class Packet :
         paylaod = ""
         if paylaod_len >0 : 
             paylaod = packet[next_byte+2:next_byte+2+paylaod_len]
-        print(ptype, metadata , paylaod)
         return cls(ptype ,metadata , paylaod)
 
         
@@ -72,7 +71,7 @@ class Singularity :
             self.connect()
             self.sock.sendall(packet)
             ack = self.sock.recv(1024)
-            print(ack)
+            # print(ack)
         finally :
             self.disconnect()
     def Publish(self , qname , msg : str ) :
@@ -87,7 +86,7 @@ class Singularity :
             self.connect()
             self.sock.sendall(packet)
             ack = self.sock.recv(1024)
-            print(ack)
+            # print(ack)
         finally :
             self.disconnect()
 
@@ -111,11 +110,12 @@ class Singularity :
                 self.sock.sendall(b"ok")
      
 def job(msg:str) :
-    wait = random.randint(0,5) 
-    print("working on " , msg , wait)
+    # wait = random.randint(0,5) 
+    wait = 5
+    # print("working on " , msg , wait)
 
     time.sleep(wait) 
-    print("job on " ,msg, " took : " , wait , "seconds")
+    print(sys.argv[2] ,": job on " ,msg, " finished ." )
 
 
 
@@ -125,6 +125,7 @@ sing = Singularity(PORT ,HOST)
 # # sing.Publish("someQueue" , "hello there 2")
 # # sing.Publish("someQueue" , "hello there 3")
 #
+print("client :" , sys.argv[2] ," starting")
 sing.Consume(sys.argv[1], job)
 
 #

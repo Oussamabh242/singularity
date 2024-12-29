@@ -68,6 +68,7 @@ func (qs *QStore) CreateQueue(name string) *Queue {
 // retrieve a reference to a Queue based on its name or an error
 func (qs *QStore) GetQueue(name string) (*Queue, error) {
 	val, ok := qs.Queues.Load(name)
+  fmt.Println(ok)
 	if !ok {
 		return nil, fmt.Errorf("No queue found")
 	}

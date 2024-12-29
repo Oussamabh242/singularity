@@ -21,7 +21,6 @@ package encoder
 
 import (
 	"encoding/binary"
-	"fmt"
 )
 
 func Encode(packetType uint8, metadata []byte, message []byte) []byte {
@@ -38,11 +37,8 @@ func Encode(packetType uint8, metadata []byte, message []byte) []byte {
 	binary.BigEndian.PutUint16(BodyByte, uint16(len(message)))
 
 	packet = append(packet, packetType)
-	fmt.Println(packet)
 	packet = append(packet, rLengthByte...)
-	fmt.Println(uint16(len(metadata)))
 	packet = append(packet, metadataByte...)
-	fmt.Println(uint16(len(message)))
 	packet = append(packet, metadata...)
 	packet = append(packet, BodyByte...)
 	packet = append(packet, message...)

@@ -20,7 +20,7 @@ package parser
 
 import (
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"log"
 )
 
@@ -71,18 +71,18 @@ func Parse(packet []byte) Packet {
 	// Parses the incomming bytes into a struct
   totalsize := len(packet)
 
-  fmt.Println("recived: " , packet)
+  // fmt.Println("recived: " , packet)
 	parsed := Packet{}
 	parsed.PacketType = int(packet[0])
 	rLength := Intify[uint32](packet[PACKET_HEAD_START:PACKET_HEAD_END]) // at most 4 bytes
 	parsed.RLenght = uint(rLength)
-  fmt.Println("--- reaining Length is " ,rLength ) // next Byte 5
+  // fmt.Println("--- reaining Length is " ,rLength ) // next Byte 5
 	if rLength == 0 || len(packet)<PACKET_HEAD_END {
 		return parsed
 	}
 	mLength := Intify[uint16](packet[META_LENGTH_START: META_LENGTH_END]) // at most 2 bytes
 	parsed.MetadataLen = uint(mLength)
-  fmt.Println("-- metadata Length is ", mLength)
+  // fmt.Println("-- metadata Length is ", mLength)
   if mLength ==0 {
     return parsed
   }
@@ -91,7 +91,7 @@ func Parse(packet []byte) Packet {
     log.Print("Error Decoding Metadata" , err)
   }
   parsed.Metadata = md
-  fmt.Println(md)
+  // fmt.Println(md)
   nextByte := META_LENGTH_END+uint(mLength) 
       
 	if nextByte>= uint(totalsize) {
@@ -99,14 +99,14 @@ func Parse(packet []byte) Packet {
 	}
 	pLength := Intify[uint16](packet[nextByte : nextByte+2])
 	parsed.PayloadLen = uint(pLength)
-  fmt.Println("-- Payload Length is " , pLength)
+  // fmt.Println("-- Payload Length is " , pLength)
 	nextByte = nextByte + 2
 	if pLength == 0 {
 		return parsed	
   }
   parsed.Payload = packet[nextByte : nextByte+uint(pLength)]
-  fmt.Println("-- msg is " , string(parsed.Payload))
-	fmt.Println(parsed)
+  // fmt.Println("-- msg is " , string(parsed.Payload))
+	// fmt.Println(parsed)
 	return parsed
 
 }

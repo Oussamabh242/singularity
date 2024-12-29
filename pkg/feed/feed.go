@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-
 	"github.com/Oussamabh242/singularity/pkg/messages"
 	"github.com/Oussamabh242/singularity/pkg/parser"
 	"github.com/Oussamabh242/singularity/pkg/queue"
@@ -20,6 +19,7 @@ import (
  */
 func FeedMessages(q *queue.Queue) {
 	for {
+    fmt.Println("listenning now are : " , len(q.Listeners))
 		select {
 		case conn := <-q.Listeners:
 
@@ -84,6 +84,7 @@ func WaitForAck(conn net.Conn, msg []byte, recv chan int, errCh chan struct{}) {
 	defer close(errCh)
 
   packet := encoder.Encode(parser.JOB ,[]byte{} ,msg)
+  fmt.Println("feeding ... " , packet)
 	if _, err := conn.Write(packet); err != nil {
 		errCh <- struct{}{}
 		return
