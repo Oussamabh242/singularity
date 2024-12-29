@@ -86,7 +86,7 @@ npm install @9k9k/singularity-js
 ```javascript
 import { Singularity } from "@9k9k/singularity-js";
 
-const sing = new Singularity("localhost", 1234);
+const sing = new Singularity(HOST, PORT); // host and port of the singularity message broker.
 
 // Create a queue with name "something".
 sing.connect2(sing.createQueue, "something");
