@@ -77,13 +77,13 @@ You can interact with the Singularity server through the JavaScript client libra
 
 To install the JavaScript client library \`@9k9k/singularity-js\`, run the following command in your project:
 
-\`\`\`bash
+```bash
 npm install @9k9k/singularity-js
-\`\`\`
+```
 
 ### Example of how to use the library:
 
-\`\`\`javascript
+```javascript
 import { Singularity } from "@9k9k/singularity-js";
 
 const sing = new Singularity("localhost", 1234);
@@ -103,7 +103,7 @@ function job(msg) {
 }
 // subscribe to the queue "something" and treat incomming messages with the "job" function .
 sing.subscribe("something", job);
-\`\`\`
+```
 
 - The code provides the ability to connect, create queues, publish messages, and subscribe to queues using the publish/subscribe model.
 
