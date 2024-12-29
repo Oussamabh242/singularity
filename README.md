@@ -68,3 +68,44 @@ singularity serve -p 8080 -s 50 -m 500
 ```
 
 This starts the server on port `8080`, allowing up to `50` subscribers per queue and a maximum of `500` messages per queue.
+
+## JavaScript Client Library
+
+You can interact with the Singularity server through the JavaScript client library \`@9k9k/singularity-js\`. 
+
+### Client Library Installation
+
+To install the JavaScript client library \`@9k9k/singularity-js\`, run the following command in your project:
+
+\`\`\`bash
+npm install @9k9k/singularity-js
+\`\`\`
+
+### Example of how to use the library:
+
+\`\`\`javascript
+import { Singularity } from "@9k9k/singularity-js";
+
+const sing = new Singularity("localhost", 1234);
+
+// Create a queue with name "something".
+sing.connect2(sing.createQueue, "something");
+
+// publish 10 messages to the queue "something".
+for (let i = 0; i < 10; i++) {
+  sing.publish("hello there", {
+    queue: "something"
+  });
+}
+
+function job(msg) {
+  console.log(msg);
+}
+// subscribe to the queue "something" and treat incomming messages with the "job" function .
+sing.subscribe("something", job);
+\`\`\`
+
+- The code provides the ability to connect, create queues, publish messages, and subscribe to queues using the publish/subscribe model.
+
+### Important Notes
+- The library is **still under development** and may not be stable.
