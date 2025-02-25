@@ -8,14 +8,6 @@ export class Singularity {
   constructor(host : string , port : number){
     this.PORT = port ; 
     this.HOST = host ; 
-    //this.client = this.connect() ; 
-  }
-  private connect():net.Socket {
-    const client = new net.Socket() ; 
-    client.connect(this.PORT , this.HOST, ()=>{
-      console.log("Socket Connected")
-    }); 
-    return client ; 
   }
 
   public connect2(cb : any , ...args : any){
@@ -27,7 +19,8 @@ export class Singularity {
     }); 
     this.client = client; 
   }
-  public  createQueue2(conn : net.Socket , queueName: string):Promise<any>{
+
+  public  createQueue(conn : net.Socket , queueName: string):Promise<any>{
     return new Promise((resolve, reject)=>{
       if (!conn.writable) {
          reject(new Error("Socket is disconnected"));
@@ -61,44 +54,44 @@ export class Singularity {
     })
   }
 
-  public  createQueue(queueName: string):Promise<any>{
-    return new Promise((resolve, reject)=>{
-       
-      if (!this.client) {
-        reject(new Error("Socket is disconnected"));
-        return  ;
-      }
-
-      const packet = new Packet(5, "", {
-        "queue": queueName,
-        "content-type": "json"
-      });
-
-
-      this.client.write(packet.encode(), (err) => {
-        if (err) {
-          reject(new Error("Failed to send packet:" +err.message));
-        }
-      });
-
-      const handleData =  (ack:Buffer) => {
-        const uint8array = new Uint8Array(ack);
-        console.log(uint8array , ack) ;
-        const decoded = Packet.decode(uint8array);
-        console.log(PacketType[decoded.pType] )
-        if ('ACKCREATE' != PacketType[decoded.pType]) {
-          if(!this.client){return reject("no client")}
-          this.client.removeListener('data', handleData)
-          return reject(new Error("Something went wrong PACKET didnot get acknowledged"))
-
-        }
-         
-        resolve(0);
-      };
-      this.client.on("data" , handleData) ; 
-
-    })
-  }
+  //public  createQueue(queueName: string):Promise<any>{
+  //  return new Promise((resolve, reject)=>{
+  //
+  //    if (!this.client) {
+  //      reject(new Error("Socket is disconnected"));
+  //      return  ;
+  //    }
+  //
+  //    const packet = new Packet(5, "", {
+  //      "queue": queueName,
+  //      "content-type": "json"
+  //    });
+  //
+  //
+  //    this.client.write(packet.encode(), (err) => {
+  //      if (err) {
+  //        reject(new Error("Failed to send packet:" +err.message));
+  //      }
+  //    });
+  //
+  //    const handleData =  (ack:Buffer) => {
+  //      const uint8array = new Uint8Array(ack);
+  //      console.log(uint8array , ack) ;
+  //      const decoded = Packet.decode(uint8array);
+  //      console.log(PacketType[decoded.pType] )
+  //      if ('ACKCREATE' != PacketType[decoded.pType]) {
+  //        if(!this.client){return reject("no client")}
+  //        this.client.removeListener('data', handleData)
+  //        return reject(new Error("Something went wrong PACKET didnot get acknowledged"))
+  //
+  //      }
+  //
+  //      resolve(0);
+  //    };
+  //    this.client.on("data" , handleData) ; 
+  //
+  //  })
+  //}
 
 
 
@@ -139,7 +132,6 @@ export class Singularity {
     });
     conn.on("data" ,(data:Buffer)=>{
       const arr = new Uint8Array(data); 
-      //console.log(arr)
 
       if(arr[0]!= PacketType.JOB){
         console.log("not JOB")
