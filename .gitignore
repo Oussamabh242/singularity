@@ -1,3 +1,4 @@
 tmp/
 air.toml
 node_modules/
+dist/

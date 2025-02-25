@@ -92,7 +92,7 @@ func WaitForAck(conn net.Conn, msg []byte, recv chan int, errCh chan struct{}) {
 
 	b := make([]byte, 40)
 	n, err := conn.Read(b)
-	fmt.Println(n, err)
+	fmt.Println("recived" ,n, err)
 	if err != nil {
 		errCh <- struct{}{}
 		return
